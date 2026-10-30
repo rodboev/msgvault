@@ -1,6 +1,8 @@
 @import './styles/tokens.css';
 @import './styles/density.css';
 
+/* Test-only frontend change for CI path selection. */
+
 * {
   box-sizing: border-box;
 }
