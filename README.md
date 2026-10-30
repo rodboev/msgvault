@@ -143,3 +143,5 @@ Join the [msgvault Discord](https://discord.gg/fDnmxB8Wkq),
 ## License
 
 [MIT](LICENSE)
+
+<!-- Test-only documentation change for CI path selection. -->
