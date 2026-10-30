@@ -1,5 +1,7 @@
 package apiprotocol
 
+// Test-only Go change for CI path selection.
+
 const (
 	ClientClassHeader       = "X-Msgvault-Client"
 	ClientClassCLI          = "cli"
