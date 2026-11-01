@@ -398,10 +398,7 @@ func TestQuietRosterBudgetExpiryBacksOffBeforeTryingLaterRoom(t *testing.T) {
 	active.LastActivity = time.Now().UTC()
 	active.Msgs = nil
 	f.addChat(active)
-	st := testutil.NewTestStore(t)
-	client := NewClient("http://beeper.test", testToken, 10000)
-	client.http.Transport = handlerTransport(f.handler())
-	imp := NewImporter(st, client)
+	imp, st := newHandlerTestImporter(t, f)
 
 	_, err := imp.Import(t.Context(), ImportOptions{AccountID: "signal", NoMedia: true})
 	requirements.NoError(err)

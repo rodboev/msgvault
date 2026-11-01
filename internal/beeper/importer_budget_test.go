@@ -16,6 +16,7 @@ import (
 	"github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.kenn.io/msgvault/internal/store"
 	"go.kenn.io/msgvault/internal/testutil"
 )
 
@@ -350,10 +351,7 @@ func TestQuietRosterRepairWritesOutlastProbeTimeout(t *testing.T) {
 		active.LastActivity = time.Now().UTC()
 		active.Msgs = nil
 		f.addChat(active)
-		st := testutil.NewTestStore(t)
-		client := NewClient("http://beeper.test", testToken, 10000)
-		client.http.Transport = handlerTransport(f.handler())
-		imp := NewImporter(st, client)
+		imp, st := newHandlerTestImporter(t, f)
 		st.DB().SetMaxOpenConns(1)
 		opts := ImportOptions{AccountID: "signal", NoMedia: true}
 		_, err := imp.Import(t.Context(), opts)
@@ -525,14 +523,20 @@ func (h handlerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return rec.Result(), nil
 }
 
+func newHandlerTestImporter(t *testing.T, f *fakeBeeper) (*Importer, *store.Store) {
+	t.Helper()
+	st := testutil.NewTestStore(t)
+	client := NewClient("http://beeper.test", testToken, 10000)
+	client.http.Transport = handlerTransport(f.handler())
+	return NewImporter(st, client), st
+}
+
 func TestImportBudgetCancelsBlockedMessagePageAndResumes(t *testing.T) {
 	base := time.Now().Add(-time.Hour).UTC().Truncate(time.Second)
 	f := newFakeBeeper(t)
 	chat := budgetTestChat("!deadline:beeper.local", 2, base)
 	f.addChat(chat)
-	client := NewClient("http://beeper.test", testToken, 10000)
-	client.http.Transport = handlerTransport(f.handler())
-	imp := NewImporter(testutil.NewTestStore(t), client)
+	imp, _ := newHandlerTestImporter(t, f)
 	_, err := imp.Import(context.Background(), ImportOptions{AccountID: "signal"})
 	require.NoError(t, err)
 	f.appendMsg(chat.ID, fakeMsg{
