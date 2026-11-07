@@ -40,16 +40,19 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-checks
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-checks
         extra-path: .git/golangci-lint-cache
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-checks
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-checks
         trim: 'true'
         extra-path: .git/golangci-lint-cache
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install SQLite development headers
       run: kit-retry 3 5 sudo apt-get -o Dir::Etc::sourcelist=sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=- -o APT::Update::Error-Mode=any update && kit-retry 3 5 sudo apt-get install -y libsqlite3-dev
@@ -77,7 +80,7 @@ jobs:
     - name: Vulnerability check
       run: make vulncheck
     - name: Log cache sizes
-      if: github.event_name != 'pull_request'
+      if: matrix.variant == 'baseline' && github.event_name != 'pull_request'
       run: du -sh "$(go env GOCACHE)" "$(go env GOMODCACHE)" "$(git rev-parse --git-path golangci-lint-cache)"
     - name: Save Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-save@main
@@ -88,7 +91,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
   test:
     runs-on: ubuntu-26.04
     timeout-minutes: 38
@@ -118,14 +121,17 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
         trim: 'true'
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install SQLite development headers
       run: kit-retry 3 5 sudo apt-get -o Dir::Etc::sourcelist=sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=- -o APT::Update::Error-Mode=any update && kit-retry 3 5 sudo apt-get install -y libsqlite3-dev
@@ -177,7 +183,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   test-sharded:
@@ -186,7 +192,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
         name:
         - cli
         - store
@@ -217,13 +223,16 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install test dependencies
       run: kit-retry 3 5 sudo apt-get -o Dir::Etc::sourcelist=sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=- -o APT::Update::Error-Mode=any update && kit-retry 3 5 sudo apt-get install -y libsqlite3-dev bubblewrap
@@ -267,14 +276,17 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-macos
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-macos
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-macos
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-macos
         trim: 'true'
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - name: Test
       run: make test TEST_TIMEOUT=39m
     - name: Check for test reruns
@@ -305,7 +317,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   frontend:
@@ -323,13 +335,16 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - uses: actions/setup-node@v7.1.0
       with:
         node-version: 26.13.0
@@ -410,7 +425,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   test-windows:
@@ -450,14 +465,17 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-windows
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-windows
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-windows
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-windows
         trim: 'true'
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install SQLite development headers
       shell: bash
@@ -521,7 +539,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   lint-windows:
@@ -538,13 +556,16 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-windows
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-windows
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-windows
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-windows
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install SQLite development headers
       shell: bash
@@ -567,7 +588,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   test-pgvector:
@@ -599,13 +620,16 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install test dependencies
       run: kit-retry 3 5 sudo apt-get -o Dir::Etc::sourcelist=sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=- -o APT::Update::Error-Mode=any update && kit-retry 3 5 sudo apt-get install -y libsqlite3-dev bubblewrap
@@ -646,7 +670,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
   test-postgres:
     if: github.event_name == 'push' || inputs.subset == 'all'
     runs-on: ubuntu-26.04
@@ -691,14 +715,17 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-postgres
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-postgres
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: $/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-fixed-${{ matrix.variant }}-linux-postgres
+        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-postgres
         trim: 'true'
       if: matrix.variant == 'candidate'
+    - name: Measure restored cache directories
+      shell: bash
+      run: python3 .github/scripts/cache-measure-sizes.py
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install SQLite development headers
       run: kit-retry 3 5 sudo apt-get -o Dir::Etc::sourcelist=sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=- -o APT::Update::Error-Mode=any update && kit-retry 3 5 sudo apt-get install -y libsqlite3-dev
@@ -733,7 +760,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["baseline","candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
 'on':
   push:
     branches:
