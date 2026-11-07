@@ -1,4 +1,4 @@
-name: Go cache measurements
+name: Go cache warm readers
 permissions:
   contents: read
   actions: read
@@ -7,114 +7,6 @@ env:
   GOTRACEBACK: all
   GOFLAGS: -trimpath
 jobs:
-  checks:
-    env:
-      DOWNLOAD_RETRY: kit-retry 3 5
-      MEASURE_VARIANT: ${{ matrix.variant }}
-    if: '(github.event_name == ''push'' || inputs.subset == ''all'') && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
-    runs-on: ubuntu-26.04
-    timeout-minutes: 37
-    steps:
-    - uses: actions/checkout@v7.0.1
-    - name: Free measurement space
-      run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-    - uses: actions/setup-go@v7.0.0
-      with:
-        go-version-file: go.mod
-        cache: false
-    - name: Download identical upstream snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/download-artifact@v8.0.1
-      with:
-        repository: kenn-io/msgvault
-        run-id: 42398968927
-        github-token: ${{ github.token }}
-        name: go-snapshot-linux-checks
-        path: ${{ runner.temp }}/snapshot
-    - name: Seed owner directories from snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: linux-checks
-      run: python3 .github/scripts/cache-measure-seed.py
-    - name: Restore Go caches (baseline)
-      uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
-      with:
-        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-checks
-        extra-path: .git/golangci-lint-cache
-      if: matrix.variant == 'baseline'
-    - name: Restore Go caches (candidate)
-      uses: $/.github/actions/go-cache-restore
-      with:
-        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-checks
-        trim: 'true'
-        extra-path: .git/golangci-lint-cache
-      if: matrix.variant == 'candidate'
-    - name: Measure restored cache directories
-      shell: bash
-      run: python3 .github/scripts/cache-measure-sizes.py
-    - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
-    - name: Install SQLite development headers
-      run: kit-retry 3 5 sudo apt-get -o Dir::Etc::sourcelist=sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=- -o APT::Update::Error-Mode=any update && kit-retry 3 5 sudo apt-get install -y libsqlite3-dev
-    - name: Check PostgreSQL build coverage
-      run: make pg-shipped-only-check
-    - name: Fetch Go checkers
-      run: GOFLAGS="${GOFLAGS:+$GOFLAGS }-n" kit-retry 3 5 make huma-check lint-workflow-retries
-    - name: Check Huma API contracts
-      run: make huma-check
-    - name: Install lint tools
-      run: |
-        make lint-tools
-        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-    - name: Check OpenAPI artifacts
-      run: make openapi-check
-    - name: Check MCP guide
-      run: make agent-guide-check
-    - name: Lint
-      run: |
-        cache=$(git rev-parse --git-path golangci-lint-cache)
-        cmp -s .custom-gcl.yml "$cache/.custom-gcl.yml" || rm -rf "$cache"
-        mkdir -p "$cache"
-        cp .custom-gcl.yml "$cache/.custom-gcl.yml"
-        make lint-ci
-    - name: Vulnerability check
-      run: make vulncheck
-    - name: Log cache sizes
-      if: matrix.variant == 'baseline' && github.event_name != 'pull_request'
-      run: du -sh "$(go env GOCACHE)" "$(go env GOMODCACHE)" "$(git rev-parse --git-path golangci-lint-cache)"
-    - name: Save Go caches (baseline)
-      uses: kenn-io/msgvault/.github/actions/go-cache-save@main
-      if: matrix.variant == 'baseline'
-    - name: Save Go caches (candidate)
-      uses: $/.github/actions/go-cache-save
-      if: matrix.variant == 'candidate'
-    - name: Verify published candidate cache
-      id: cache-published
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/cache/restore@v6.1.0
-      with:
-        path: ${{ env.GO_CACHE_PATHS }}
-        key: ${{ env.GO_CACHE_KEY }}
-        lookup-only: true
-    - name: Preserve candidate output when cache publication fails
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: linux-checks
-      run: python3 .github/scripts/cache-measure-pack.py
-    - name: Upload unpublished candidate cache
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      uses: actions/upload-artifact@v7.0.2
-      with:
-        name: go-produced-99cc6603d8-linux-checks
-        path: ${{ runner.temp }}/produced-cache/*
-        compression-level: 0
-        retention-days: 7
-        if-no-files-found: error
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
   test:
     runs-on: ubuntu-26.04
     timeout-minutes: 38
@@ -126,21 +18,6 @@ jobs:
       with:
         go-version-file: go.mod
         cache: false
-    - name: Download identical upstream snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/download-artifact@v8.0.1
-      with:
-        repository: kenn-io/msgvault
-        run-id: 42398968927
-        github-token: ${{ github.token }}
-        name: go-snapshot-linux-test
-        path: ${{ runner.temp }}/snapshot
-    - name: Seed owner directories from snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: linux-test
-      run: python3 .github/scripts/cache-measure-seed.py
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
@@ -152,6 +29,12 @@ jobs:
         group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
         trim: 'true'
       if: matrix.variant == 'candidate'
+    - name: Require a warm exact cache hit
+      shell: bash
+      run: |
+        echo "CACHE_MEASUREMENT_HIT=$GO_CACHE_HIT"
+        echo "CACHE_MEASUREMENT_KEY=$GO_CACHE_KEY"
+        test "$GO_CACHE_HIT" = true
     - name: Measure restored cache directories
       shell: bash
       run: python3 .github/scripts/cache-measure-sizes.py
@@ -197,49 +80,20 @@ jobs:
         path: gotestsum/vector-stub.json
         retention-days: 14
         if-no-files-found: ignore
-    - name: Save Go caches (baseline)
-      uses: kenn-io/msgvault/.github/actions/go-cache-save@main
-      if: matrix.variant == 'baseline'
-    - name: Save Go caches (candidate)
-      uses: $/.github/actions/go-cache-save
-      if: matrix.variant == 'candidate'
-    - name: Verify published candidate cache
-      id: cache-published
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/cache/restore@v6.1.0
-      with:
-        path: ${{ env.GO_CACHE_PATHS }}
-        key: ${{ env.GO_CACHE_KEY }}
-        lookup-only: true
-    - name: Preserve candidate output when cache publication fails
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: linux-test
-      run: python3 .github/scripts/cache-measure-pack.py
-    - name: Upload unpublished candidate cache
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      uses: actions/upload-artifact@v7.0.2
-      with:
-        name: go-produced-99cc6603d8-linux-test
-        path: ${{ runner.temp }}/produced-cache/*
-        compression-level: 0
-        retention-days: 7
-        if-no-files-found: error
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
-    if: '(true) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
+    if: inputs.group == 'linux'
   test-sharded:
-    if: '(github.event_name != ''push'' && (inputs.subset == ''shared'' || inputs.subset == ''all'')) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
+    if: inputs.group == 'linux'
     name: test-sharded (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(format('["{0}"]', inputs.variant || 'candidate')) }}
         name:
         - cli
         - store
@@ -277,6 +131,12 @@ jobs:
       with:
         group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
+    - name: Require a warm exact cache hit
+      shell: bash
+      run: |
+        echo "CACHE_MEASUREMENT_HIT=$GO_CACHE_HIT"
+        echo "CACHE_MEASUREMENT_KEY=$GO_CACHE_KEY"
+        test "$GO_CACHE_HIT" = true
     - name: Measure restored cache directories
       shell: bash
       run: python3 .github/scripts/cache-measure-sizes.py
@@ -295,103 +155,8 @@ jobs:
         if-no-files-found: ignore
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
-  test-macos-15:
-    if: '(github.event_name == ''push'' || inputs.subset == ''all'') && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
-    runs-on: macos-26
-    timeout-minutes: 79
-    steps:
-    - uses: actions/checkout@v7.0.1
-    - uses: actions/setup-go@v7.0.0
-      with:
-        go-version-file: go.mod
-        cache: false
-    - name: Download identical upstream snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/download-artifact@v8.0.1
-      with:
-        repository: kenn-io/msgvault
-        run-id: 42398968927
-        github-token: ${{ github.token }}
-        name: go-snapshot-macos
-        path: ${{ runner.temp }}/snapshot
-    - name: Seed owner directories from snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: macos
-      run: python3 .github/scripts/cache-measure-seed.py
-    - name: Restore Go caches (baseline)
-      uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
-      with:
-        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-macos
-      if: matrix.variant == 'baseline'
-    - name: Restore Go caches (candidate)
-      uses: $/.github/actions/go-cache-restore
-      with:
-        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-macos
-        trim: 'true'
-      if: matrix.variant == 'candidate'
-    - name: Measure restored cache directories
-      shell: bash
-      run: python3 .github/scripts/cache-measure-sizes.py
-    - name: Test
-      run: make test TEST_TIMEOUT=39m
-    - name: Check for test reruns
-      if: always()
-      id: check-reruns
-      shell: bash
-      run: |
-        for report in gotestsum/*-reruns.txt; do
-          if [ -s "$report" ]; then
-            echo "reruns=true" >> "$GITHUB_OUTPUT"
-            break
-          fi
-        done
-    - name: Upload test events
-      if: failure() || github.run_attempt > 1 || steps.check-reruns.outputs.reruns == 'true'
-      uses: actions/upload-artifact@v7.0.2
-      with:
-        name: gotestsum-macos-attempt-${{ github.run_attempt }}-${{ matrix.variant }}
-        path: gotestsum/*.json
-        retention-days: 14
-        if-no-files-found: ignore
-    - name: Save Go caches (baseline)
-      uses: kenn-io/msgvault/.github/actions/go-cache-save@main
-      if: matrix.variant == 'baseline'
-    - name: Save Go caches (candidate)
-      uses: $/.github/actions/go-cache-save
-      if: matrix.variant == 'candidate'
-    - name: Verify published candidate cache
-      id: cache-published
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/cache/restore@v6.1.0
-      with:
-        path: ${{ env.GO_CACHE_PATHS }}
-        key: ${{ env.GO_CACHE_KEY }}
-        lookup-only: true
-    - name: Preserve candidate output when cache publication fails
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: macos
-      run: python3 .github/scripts/cache-measure-pack.py
-    - name: Upload unpublished candidate cache
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      uses: actions/upload-artifact@v7.0.2
-      with:
-        name: go-produced-99cc6603d8-macos
-        path: ${{ runner.temp }}/produced-cache/*
-        compression-level: 0
-        retention-days: 7
-        if-no-files-found: error
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
-    env:
-      MEASURE_VARIANT: ${{ matrix.variant }}
   frontend:
-    if: '(github.event_name != ''push'' && (inputs.subset == ''shared'' || inputs.subset == ''all'')) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
+    if: inputs.group == 'linux'
     runs-on: ubuntu-26.04
     timeout-minutes: 33
     steps:
@@ -412,6 +177,12 @@ jobs:
       with:
         group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
+    - name: Require a warm exact cache hit
+      shell: bash
+      run: |
+        echo "CACHE_MEASUREMENT_HIT=$GO_CACHE_HIT"
+        echo "CACHE_MEASUREMENT_KEY=$GO_CACHE_KEY"
+        test "$GO_CACHE_HIT" = true
     - name: Measure restored cache directories
       shell: bash
       run: python3 .github/scripts/cache-measure-sizes.py
@@ -495,7 +266,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   test-windows:
@@ -517,21 +288,6 @@ jobs:
       with:
         go-version-file: go.mod
         cache: false
-    - name: Download identical upstream snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/download-artifact@v8.0.1
-      with:
-        repository: kenn-io/msgvault
-        run-id: 42399332998
-        github-token: ${{ github.token }}
-        name: go-snapshot-windows
-        path: ${{ runner.temp }}/snapshot
-    - name: Seed owner directories from snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: windows
-      run: python3 .github/scripts/cache-measure-seed.py
     - name: Restore Go caches (baseline)
       uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
       with:
@@ -543,6 +299,12 @@ jobs:
         group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-windows
         trim: 'true'
       if: matrix.variant == 'candidate'
+    - name: Require a warm exact cache hit
+      shell: bash
+      run: |
+        echo "CACHE_MEASUREMENT_HIT=$GO_CACHE_HIT"
+        echo "CACHE_MEASUREMENT_KEY=$GO_CACHE_KEY"
+        test "$GO_CACHE_HIT" = true
     - name: Measure restored cache directories
       shell: bash
       run: python3 .github/scripts/cache-measure-sizes.py
@@ -600,44 +362,15 @@ jobs:
       with:
         name: msgvault-windows-amd64-${{ matrix.variant }}
         path: msgvault.exe
-    - name: Save Go caches (baseline)
-      uses: kenn-io/msgvault/.github/actions/go-cache-save@main
-      if: matrix.variant == 'baseline'
-    - name: Save Go caches (candidate)
-      uses: $/.github/actions/go-cache-save
-      if: matrix.variant == 'candidate'
-    - name: Verify published candidate cache
-      id: cache-published
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/cache/restore@v6.1.0
-      with:
-        path: ${{ env.GO_CACHE_PATHS }}
-        key: ${{ env.GO_CACHE_KEY }}
-        lookup-only: true
-    - name: Preserve candidate output when cache publication fails
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: windows
-      run: python3 .github/scripts/cache-measure-pack.py
-    - name: Upload unpublished candidate cache
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      uses: actions/upload-artifact@v7.0.2
-      with:
-        name: go-produced-99cc6603d8-windows
-        path: ${{ runner.temp }}/produced-cache/*
-        compression-level: 0
-        retention-days: 7
-        if-no-files-found: error
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
-    if: '(true) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
+    if: inputs.group == 'windows'
   lint-windows:
-    if: '(github.event_name != ''push'' && (inputs.subset == ''shared'' || inputs.subset == ''all'')) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
+    if: inputs.group == 'windows'
     runs-on: windows-2025
     timeout-minutes: 64
     steps:
@@ -657,6 +390,12 @@ jobs:
       with:
         group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-windows
       if: matrix.variant == 'candidate'
+    - name: Require a warm exact cache hit
+      shell: bash
+      run: |
+        echo "CACHE_MEASUREMENT_HIT=$GO_CACHE_HIT"
+        echo "CACHE_MEASUREMENT_KEY=$GO_CACHE_KEY"
+        test "$GO_CACHE_HIT" = true
     - name: Measure restored cache directories
       shell: bash
       run: python3 .github/scripts/cache-measure-sizes.py
@@ -682,11 +421,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   test-pgvector:
-    if: '(github.event_name != ''push'' && (inputs.subset == ''shared'' || inputs.subset == ''all'')) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
+    if: inputs.group == 'linux'
     runs-on: ubuntu-26.04
     timeout-minutes: 109
     services:
@@ -721,6 +460,12 @@ jobs:
       with:
         group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
+    - name: Require a warm exact cache hit
+      shell: bash
+      run: |
+        echo "CACHE_MEASUREMENT_HIT=$GO_CACHE_HIT"
+        echo "CACHE_MEASUREMENT_KEY=$GO_CACHE_KEY"
+        test "$GO_CACHE_HIT" = true
     - name: Measure restored cache directories
       shell: bash
       run: python3 .github/scripts/cache-measure-sizes.py
@@ -764,124 +509,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
-  test-postgres:
-    if: '(github.event_name == ''push'' || inputs.subset == ''all'') && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
-    runs-on: ubuntu-26.04
-    timeout-minutes: 55
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: msgvault_test
-          POSTGRES_PASSWORD: msgvault_test
-          POSTGRES_DB: msgvault_test
-          POSTGRES_INITDB_ARGS: -c max_locks_per_transaction=256 -c fsync=off -c synchronous_commit=off -c full_page_writes=off
-        ports:
-        - 5432:5432
-        options: --tmpfs /var/lib/postgresql:rw,size=4g --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-    env:
-      MSGVAULT_TEST_DB: postgres://msgvault_test:msgvault_test@localhost:5432/msgvault_test?sslmode=disable
-      MEASURE_VARIANT: ${{ matrix.variant }}
-    steps:
-    - uses: actions/checkout@v7.0.1
-    - name: Free measurement space
-      run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-    - uses: actions/setup-go@v7.0.0
-      with:
-        go-version-file: go.mod
-        cache: false
-    - name: Download identical upstream snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/download-artifact@v8.0.1
-      with:
-        repository: kenn-io/msgvault
-        run-id: 42398968927
-        github-token: ${{ github.token }}
-        name: go-snapshot-linux-postgres
-        path: ${{ runner.temp }}/snapshot
-    - name: Seed owner directories from snapshot
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: linux-postgres
-      run: python3 .github/scripts/cache-measure-seed.py
-    - name: Restore Go caches (baseline)
-      uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
-      with:
-        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-postgres
-      if: matrix.variant == 'baseline'
-    - name: Restore Go caches (candidate)
-      uses: $/.github/actions/go-cache-restore
-      with:
-        group: measure-20261107-${{ matrix.variant == 'candidate' && '99cc6603d8' || 'fixed' }}-${{ matrix.variant }}-linux-postgres
-        trim: 'true'
-      if: matrix.variant == 'candidate'
-    - name: Measure restored cache directories
-      shell: bash
-      run: python3 .github/scripts/cache-measure-sizes.py
-    - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
-    - name: Install SQLite development headers
-      run: kit-retry 3 5 sudo apt-get -o Dir::Etc::sourcelist=sources.list.d/ubuntu.sources -o Dir::Etc::sourceparts=- -o APT::Update::Error-Mode=any update && kit-retry 3 5 sudo apt-get install -y libsqlite3-dev
-    - *id001
-    - name: Test (PostgreSQL)
-      run: make test-pg-shipped-unsharded TEST_TIMEOUT=24m
-    - name: Check for test reruns
-      if: always()
-      id: check-reruns
-      shell: bash
-      run: |
-        for report in gotestsum/*-reruns.txt; do
-          if [ -s "$report" ]; then
-            echo "reruns=true" >> "$GITHUB_OUTPUT"
-            break
-          fi
-        done
-    - name: Upload test events
-      if: failure() || github.run_attempt > 1 || steps.check-reruns.outputs.reruns == 'true'
-      uses: actions/upload-artifact@v7.0.2
-      with:
-        name: gotestsum-pg-shipped-unsharded-attempt-${{ github.run_attempt }}-${{ matrix.variant }}
-        path: gotestsum/*.json
-        retention-days: 14
-        if-no-files-found: ignore
-    - name: Save Go caches (baseline)
-      uses: kenn-io/msgvault/.github/actions/go-cache-save@main
-      if: matrix.variant == 'baseline'
-    - name: Save Go caches (candidate)
-      uses: $/.github/actions/go-cache-save
-      if: matrix.variant == 'candidate'
-    - name: Verify published candidate cache
-      id: cache-published
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/cache/restore@v6.1.0
-      with:
-        path: ${{ env.GO_CACHE_PATHS }}
-        key: ${{ env.GO_CACHE_KEY }}
-        lookup-only: true
-    - name: Preserve candidate output when cache publication fails
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      shell: bash
-      env:
-        SNAPSHOT_GROUP: linux-postgres
-      run: python3 .github/scripts/cache-measure-pack.py
-    - name: Upload unpublished candidate cache
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
-      uses: actions/upload-artifact@v7.0.2
-      with:
-        name: go-produced-99cc6603d8-linux-postgres
-        path: ${{ runner.temp }}/produced-cache/*
-        compression-level: 0
-        retention-days: 7
-        if-no-files-found: error
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
+        variant: ${{ fromJSON(format('["{0}"]', inputs.variant || 'candidate')) }}
 'on':
-  push:
-    branches:
-    - main
   workflow_dispatch:
     inputs:
       variant:
@@ -900,6 +529,12 @@ jobs:
       sample:
         type: string
         default: manual
+      group:
+        type: choice
+        options:
+        - linux
+        - windows
+        default: linux
   workflow_call:
     inputs:
       variant:
@@ -911,4 +546,8 @@ jobs:
       sample:
         type: string
         default: pr
-run-name: Go cache ${{ inputs.variant || 'owners' }} / ${{ inputs.subset || 'all owners' }} / ${{ inputs.sample || 'seed' }}
+      group:
+        type: string
+        default: linux
+run-name: Go cache ${{ inputs.variant }} / ${{ inputs.group }} / ${{ inputs.sample }}
+cache-mode: read
