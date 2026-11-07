@@ -49,13 +49,13 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-checks
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-checks
         extra-path: .git/golangci-lint-cache
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-checks
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-checks
         trim: 'true'
         extra-path: .git/golangci-lint-cache
       if: matrix.variant == 'candidate'
@@ -136,12 +136,12 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-test
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-test
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
         trim: 'true'
       if: matrix.variant == 'candidate'
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
@@ -244,12 +244,12 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-test
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-test
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install test dependencies
@@ -303,12 +303,12 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-macos
+        group: measure-20261107-fixed-${{ matrix.variant }}-macos
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-macos
+        group: measure-20261107-fixed-${{ matrix.variant }}-macos
         trim: 'true'
       if: matrix.variant == 'candidate'
     - name: Test
@@ -368,12 +368,12 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-test
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-test
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
     - uses: actions/setup-node@v7.1.0
       with:
@@ -504,12 +504,12 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-windows
+        group: measure-20261107-fixed-${{ matrix.variant }}-windows
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-windows
+        group: measure-20261107-fixed-${{ matrix.variant }}-windows
         trim: 'true'
       if: matrix.variant == 'candidate'
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
@@ -601,12 +601,12 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-windows
+        group: measure-20261107-fixed-${{ matrix.variant }}-windows
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-windows
+        group: measure-20261107-fixed-${{ matrix.variant }}-windows
       if: matrix.variant == 'candidate'
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install SQLite development headers
@@ -671,12 +671,12 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-test
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-test
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-test
       if: matrix.variant == 'candidate'
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
     - name: Install test dependencies
@@ -772,12 +772,12 @@ jobs:
     - name: Restore Go caches (baseline)
       uses: ./.measurement-baseline/.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-postgres
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-postgres
       if: matrix.variant == 'baseline'
     - name: Restore Go caches (candidate)
       uses: ./.github/actions/go-cache-restore
       with:
-        group: measure-20261107-${{ matrix.variant }}-linux-postgres
+        group: measure-20261107-fixed-${{ matrix.variant }}-linux-postgres
         trim: 'true'
       if: matrix.variant == 'candidate'
     - uses: kenn-io/kit/.github/actions/kit-retry@v0.48.2
