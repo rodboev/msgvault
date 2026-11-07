@@ -7,7 +7,7 @@ jobs:
   run:
     if: github.event.label.name == 'cache-measure'
     cache-mode: read
-    uses: rodboev/msgvault/.github/workflows/ci.yml@59ca229f1ab3d7b3b46fff7b50b61fe5949f1dfc
+    uses: rodboev/msgvault/.github/workflows/ci.yml@4e97b62eab940d0b706ac8460a20b51f00549c14
     with:
       variant: candidate
       subset: core
