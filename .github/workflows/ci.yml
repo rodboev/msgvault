@@ -11,7 +11,7 @@ jobs:
     env:
       DOWNLOAD_RETRY: kit-retry 3 5
       MEASURE_VARIANT: ${{ matrix.variant }}
-    if: github.event_name == 'push' || inputs.subset == 'all'
+    if: '(github.event_name == ''push'' || inputs.subset == ''all'') && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
     runs-on: ubuntu-26.04
     timeout-minutes: 37
     steps:
@@ -232,8 +232,9 @@ jobs:
         variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
+    if: '(true) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
   test-sharded:
-    if: github.event_name != 'push' && (inputs.subset == 'shared' || inputs.subset == 'all')
+    if: '(github.event_name != ''push'' && (inputs.subset == ''shared'' || inputs.subset == ''all'')) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
     name: test-sharded (${{ matrix.name }})
     strategy:
       fail-fast: false
@@ -295,7 +296,7 @@ jobs:
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   test-macos-15:
-    if: github.event_name == 'push' || inputs.subset == 'all'
+    if: '(github.event_name == ''push'' || inputs.subset == ''all'') && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
     runs-on: macos-26
     timeout-minutes: 79
     steps:
@@ -390,7 +391,7 @@ jobs:
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   frontend:
-    if: github.event_name != 'push' && (inputs.subset == 'shared' || inputs.subset == 'all')
+    if: '(github.event_name != ''push'' && (inputs.subset == ''shared'' || inputs.subset == ''all'')) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
     runs-on: ubuntu-26.04
     timeout-minutes: 33
     steps:
@@ -634,8 +635,9 @@ jobs:
         variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
+    if: '(true) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
   lint-windows:
-    if: github.event_name != 'push' && (inputs.subset == 'shared' || inputs.subset == 'all')
+    if: '(github.event_name != ''push'' && (inputs.subset == ''shared'' || inputs.subset == ''all'')) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
     runs-on: windows-2025
     timeout-minutes: 64
     steps:
@@ -684,7 +686,7 @@ jobs:
     env:
       MEASURE_VARIANT: ${{ matrix.variant }}
   test-pgvector:
-    if: github.event_name != 'push' && (inputs.subset == 'shared' || inputs.subset == 'all')
+    if: '(github.event_name != ''push'' && (inputs.subset == ''shared'' || inputs.subset == ''all'')) && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
     runs-on: ubuntu-26.04
     timeout-minutes: 109
     services:
@@ -764,7 +766,7 @@ jobs:
       matrix:
         variant: ${{ fromJSON(github.event_name == 'push' && '["candidate"]' || format('["{0}"]', inputs.variant || 'candidate')) }}
   test-postgres:
-    if: github.event_name == 'push' || inputs.subset == 'all'
+    if: '(github.event_name == ''push'' || inputs.subset == ''all'') && (github.event_name != ''push'' || !startsWith(github.event.head_commit.message, ''ci: prepare cache publication'') && !startsWith(github.event.head_commit.message, ''ci: publish retained measurement caches''))'
     runs-on: ubuntu-26.04
     timeout-minutes: 55
     services:

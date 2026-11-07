@@ -1,0 +1,89 @@
+name: Publish retained measurement caches
+on:
+  push:
+    branches: [main]
+    paths: [.github/cache-publish-request.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  plan:
+    if: "startsWith(github.event.head_commit.message, 'ci: publish retained measurement caches')"
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      entries: ${{ steps.request.outputs.entries }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - id: request
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          data = json.loads(Path('.github/cache-publish-request.json').read_text())
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('entries=' + json.dumps(data) + '\n')
+          PY
+  publish:
+    needs: plan
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.entries) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Free publication space
+        if: runner.os == 'Linux'
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+      - name: Use Windows owner paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $paths = @{ GOCACHE = 'go-build'; GOMODCACHE = 'go-mod' }
+          foreach ($entry in $paths.GetEnumerator()) {
+            $path = Join-Path $env:RUNNER_TEMP $entry.Value
+            New-Item -ItemType Directory -Force -Path $path | Out-Null
+            "$($entry.Key)=$path" >> $env:GITHUB_ENV
+          }
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Select baseline cache namespace
+        if: matrix.variant == 'baseline'
+        uses: kenn-io/msgvault/.github/actions/go-cache-restore@main
+        with:
+          group: measure-20261107-${{ matrix.generation }}-${{ matrix.variant }}-${{ matrix.group }}
+          extra-path: ${{ matrix.group == 'linux-checks' && '.git/golangci-lint-cache' || '' }}
+      - name: Select candidate cache namespace
+        if: matrix.variant == 'candidate'
+        uses: $/.github/actions/go-cache-restore
+        with:
+          group: measure-20261107-${{ matrix.generation }}-${{ matrix.variant }}-${{ matrix.group }}
+          extra-path: ${{ matrix.group == 'linux-checks' && '.git/golangci-lint-cache' || '' }}
+      - name: Download preserved cache
+        if: env.GO_CACHE_HIT != 'true'
+        uses: actions/download-artifact@v8.0.1
+        with:
+          repository: ${{ matrix.repository }}
+          run-id: ${{ matrix.run_id }}
+          github-token: ${{ github.token }}
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/snapshot
+      - name: Restore preserved files and timestamps
+        if: env.GO_CACHE_HIT != 'true'
+        shell: bash
+        env:
+          SNAPSHOT_GROUP: ${{ matrix.group }}
+        run: python3 .github/scripts/cache-measure-seed.py
+      - name: Publish baseline snapshot
+        if: matrix.variant == 'baseline'
+        uses: kenn-io/msgvault/.github/actions/go-cache-save@main
+      - name: Publish candidate output
+        if: matrix.variant == 'candidate'
+        uses: $/.github/actions/go-cache-save
