@@ -88,6 +88,29 @@ jobs:
     - name: Save Go caches (candidate)
       uses: $/.github/actions/go-cache-save
       if: matrix.variant == 'candidate'
+    - name: Verify published candidate cache
+      id: cache-published
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: ${{ env.GO_CACHE_PATHS }}
+        key: ${{ env.GO_CACHE_KEY }}
+        lookup-only: true
+    - name: Preserve candidate output when cache publication fails
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SNAPSHOT_GROUP: linux-checks
+      run: python3 .github/scripts/cache-measure-pack.py
+    - name: Upload unpublished candidate cache
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      uses: actions/upload-artifact@v7.0.2
+      with:
+        name: go-produced-99cc6603d8-linux-checks
+        path: ${{ runner.temp }}/produced-cache/*
+        compression-level: 0
+        retention-days: 7
+        if-no-files-found: error
     strategy:
       fail-fast: false
       matrix:
@@ -180,6 +203,29 @@ jobs:
     - name: Save Go caches (candidate)
       uses: $/.github/actions/go-cache-save
       if: matrix.variant == 'candidate'
+    - name: Verify published candidate cache
+      id: cache-published
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: ${{ env.GO_CACHE_PATHS }}
+        key: ${{ env.GO_CACHE_KEY }}
+        lookup-only: true
+    - name: Preserve candidate output when cache publication fails
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SNAPSHOT_GROUP: linux-test
+      run: python3 .github/scripts/cache-measure-pack.py
+    - name: Upload unpublished candidate cache
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      uses: actions/upload-artifact@v7.0.2
+      with:
+        name: go-produced-99cc6603d8-linux-test
+        path: ${{ runner.temp }}/produced-cache/*
+        compression-level: 0
+        retention-days: 7
+        if-no-files-found: error
     strategy:
       fail-fast: false
       matrix:
@@ -314,6 +360,29 @@ jobs:
     - name: Save Go caches (candidate)
       uses: $/.github/actions/go-cache-save
       if: matrix.variant == 'candidate'
+    - name: Verify published candidate cache
+      id: cache-published
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: ${{ env.GO_CACHE_PATHS }}
+        key: ${{ env.GO_CACHE_KEY }}
+        lookup-only: true
+    - name: Preserve candidate output when cache publication fails
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SNAPSHOT_GROUP: macos
+      run: python3 .github/scripts/cache-measure-pack.py
+    - name: Upload unpublished candidate cache
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      uses: actions/upload-artifact@v7.0.2
+      with:
+        name: go-produced-99cc6603d8-macos
+        path: ${{ runner.temp }}/produced-cache/*
+        compression-level: 0
+        retention-days: 7
+        if-no-files-found: error
     strategy:
       fail-fast: false
       matrix:
@@ -536,6 +605,29 @@ jobs:
     - name: Save Go caches (candidate)
       uses: $/.github/actions/go-cache-save
       if: matrix.variant == 'candidate'
+    - name: Verify published candidate cache
+      id: cache-published
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: ${{ env.GO_CACHE_PATHS }}
+        key: ${{ env.GO_CACHE_KEY }}
+        lookup-only: true
+    - name: Preserve candidate output when cache publication fails
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SNAPSHOT_GROUP: windows
+      run: python3 .github/scripts/cache-measure-pack.py
+    - name: Upload unpublished candidate cache
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      uses: actions/upload-artifact@v7.0.2
+      with:
+        name: go-produced-99cc6603d8-windows
+        path: ${{ runner.temp }}/produced-cache/*
+        compression-level: 0
+        retention-days: 7
+        if-no-files-found: error
     strategy:
       fail-fast: false
       matrix:
@@ -757,6 +849,29 @@ jobs:
     - name: Save Go caches (candidate)
       uses: $/.github/actions/go-cache-save
       if: matrix.variant == 'candidate'
+    - name: Verify published candidate cache
+      id: cache-published
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/cache/restore@v6.1.0
+      with:
+        path: ${{ env.GO_CACHE_PATHS }}
+        key: ${{ env.GO_CACHE_KEY }}
+        lookup-only: true
+    - name: Preserve candidate output when cache publication fails
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SNAPSHOT_GROUP: linux-postgres
+      run: python3 .github/scripts/cache-measure-pack.py
+    - name: Upload unpublished candidate cache
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache-published.outputs.cache-hit != 'true'
+      uses: actions/upload-artifact@v7.0.2
+      with:
+        name: go-produced-99cc6603d8-linux-postgres
+        path: ${{ runner.temp }}/produced-cache/*
+        compression-level: 0
+        retention-days: 7
+        if-no-files-found: error
     strategy:
       fail-fast: false
       matrix:
