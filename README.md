@@ -115,6 +115,8 @@ operation, see the [setup guide](docs/setup.md#open-the-web-ui). The release bin
 includes the browser application; it needs no separate Node or Bun installation
 at runtime. Use `msgvault tui` for the terminal interface.
 
+`msgvault definitely-missing-command`
+
 For another provider or a local export, start with
 [choosing a source](docs/guides/sources.md). Google credentials are needed only
 for Google-backed sources. The [setup guide](docs/setup.md) covers installation,

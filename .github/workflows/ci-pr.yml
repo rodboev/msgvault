@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: kenn-io/actions/release-commands@main
         with:
+          repository: kenn-io/msgvault
           files: |
             README.md
             scripts/install.sh
