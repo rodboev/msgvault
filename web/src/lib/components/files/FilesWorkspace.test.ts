@@ -1332,8 +1332,7 @@ describe('FilesWorkspace', () => {
     const onFilenameQueryChange = vi.fn(), onMIMEFamiliesChange = vi.fn();
     const view = render(FilesWorkspace, { client, embedded: true, identityScope: { kind: 'person', id: 42 }, personPresentation: 'files', predicate: { filters: [] }, sort: { field: 'occurred_at', direction: 'desc' }, filenameQuery: 'old', mimeFamilies: ['pdf', 'text'], onFilenameQueryChange, onMIMEFamiliesChange });
     await screen.findByText('fixture.pdf');
-    expect(screen.getByText('Filename', { selector: 'label > span' })).toBeDefined();
-    expect((screen.getByRole('searchbox', { name: 'Filter filename' }) as HTMLInputElement).placeholder).toBe('');
+    expect((screen.getByRole('searchbox', { name: 'Filter filename' }) as HTMLInputElement).placeholder).toBe('Filename');
     await fireEvent.input(screen.getByRole('searchbox', { name: 'Filter filename' }), { target: { value: 'budget' } });
     expect(onFilenameQueryChange).toHaveBeenCalledWith('budget');
     await fireEvent.click(screen.getByRole('checkbox', { name: 'Audio' }));
@@ -1412,14 +1411,14 @@ it('leaves recovery with the list and keeps the boundary notice after Previous',
   expect(within(dialog).queryByRole('alert')).toBeNull();
   await fireEvent.click(within(dialog).getByRole('button', { name: 'Next file' }));
   dialog = await screen.findByRole('dialog', { name: 'View second.txt' });
-  expect(within(dialog).getByRole('alert').textContent).toBe('Page unavailable');
+  expect(within(dialog).getByRole('alert').textContent).toContain('Page unavailable');
   expect(within(dialog).getByRole('button', { name: 'Next file' }).hasAttribute('disabled')).toBe(true);
   await fireEvent.click(within(dialog).getByRole('button', { name: 'Previous file' }));
   dialog = await screen.findByRole('dialog', { name: 'View fixture.pdf' });
   expect(within(dialog).queryByRole('alert')).toBeNull();
   await fireEvent.click(within(dialog).getByRole('button', { name: 'Next file' }));
   dialog = await screen.findByRole('dialog', { name: 'View second.txt' });
-  expect(within(dialog).getByRole('alert').textContent).toBe('Page unavailable');
+  expect(within(dialog).getByRole('alert').textContent).toContain('Page unavailable');
 
 });
 

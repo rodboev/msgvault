@@ -242,3 +242,37 @@ describe('KataEvidenceDialog', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('List unavailable');
   });
 });
+
+it('files a selected transcript quote with rune offsets after an emoji', async () => {
+  const transcript = 'Café 🙂 send the budget';
+  const quote = 'send the budget';
+  const doc = { vault_uid: 'vault', node_id: 1, content_version_id: 'v1', content_sha256: 'a'.repeat(64), build_id: 'build', rendition_attachment_id: 'rendition', rendition_sha256: 'b'.repeat(64), start_rune: 0, end_rune: 22 };
+  const reference = { version: 1, kind: 'docbank_rendition', archive_uid: 'archive', message_id: 42, source_type: 'email', source_identifier: 'example', source_message_id: '42', docbank_rendition: doc };
+  const exact = { ...reference, docbank_rendition: { ...doc, start_rune: 7, end_rune: 22 } };
+  let filed: unknown;
+  const client = createAPIClient(async input => {
+    const request = input as Request;
+    const path = new URL(request.url).pathname;
+    if (path.endsWith('/open-issues')) return Response.json({ issues: [issue], truncated: false });
+    if (path.endsWith('/prepare')) {
+      const body = await request.json();
+      const narrowed = body.selectors[0].end_rune != null;
+      if (narrowed) expect(body.selectors[0]).toEqual({ kind: 'docbank_rendition', message_id: 42, attachment_id: 7, start_rune: 7, end_rune: 22 });
+      return Response.json({ evidence: [{ id: 'e', passage: 'p', reference: narrowed ? exact : reference, excerpt: narrowed ? quote : transcript, display: {}, content_trust: 'untrusted' }] });
+    }
+    filed = await request.json();
+    return Response.json({ issue, replayed: false });
+  });
+  render(KataEvidenceDialog, { client, selector: { kind: 'docbank_rendition', message_id: 42, attachment_id: 7, start_rune: 0, max_chars: 1000 } });
+  const node = (await screen.findByText(transcript)).firstChild as Text;
+  const range = document.createRange();
+  range.setStart(node, transcript.indexOf(quote)); range.setEnd(node, transcript.length);
+  window.getSelection()?.removeAllRanges(); window.getSelection()?.addRange(range);
+  await fireEvent.click(screen.getByRole('button', { name: 'Quote selection' }));
+  await screen.findByText(quote);
+  await fireEvent.click(screen.getByRole('radio', { name: 'Existing' }));
+  await fireEvent.click(await screen.findByRole('radio', { name: 'Follow up · example#abcd' }));
+  await fireEvent.click(screen.getByRole('button', { name: 'Add quote' }));
+  await screen.findByText('example#abcd');
+  expect(filed).toEqual({ evidence: [exact] });
+});

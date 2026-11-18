@@ -63,7 +63,7 @@ describe('MediaThumbnail', () => {
       client: createAPIClient(declaredFetch),
       file: media({ size_bytes: MAX_THUMBNAIL_BYTES + 1 })
     });
-    expect(await screen.findByText('Image preview unavailable')).toBeDefined();
+    expect(await screen.findByText('No preview')).toBeDefined();
     expect(declaredFetch).not.toHaveBeenCalled();
     declared.unmount();
 
@@ -71,7 +71,7 @@ describe('MediaThumbnail', () => {
       headers: { 'Content-Type': 'image/png', 'Content-Length': String(MAX_THUMBNAIL_BYTES + 1) }
     }));
     render(MediaThumbnail, { client: createAPIClient(streamedFetch), file: media() });
-    expect(await screen.findByText('Image preview unavailable')).toBeDefined();
+    expect(await screen.findByText('No preview')).toBeDefined();
     expect(createObjectURL).not.toHaveBeenCalled();
   });
 
@@ -94,7 +94,7 @@ describe('MediaThumbnail', () => {
       file: media({ filename: 'animation.gif', mime_type: 'image/gif' })
     });
 
-    expect(await screen.findByText('Image preview unavailable')).toBeDefined();
+    expect(await screen.findByText('No preview')).toBeDefined();
     expect(fetchFn).not.toHaveBeenCalled();
     expect(screen.queryByRole('img')).toBeNull();
   });

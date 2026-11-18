@@ -87,7 +87,7 @@
   function quoteSelection(): void {
     const selection = window.getSelection();
     const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : undefined;
-    const origin = (preview?.reference.message ?? preview?.reference.document_chunk)?.start_rune;
+    const origin = (preview?.reference.message ?? preview?.reference.docbank_rendition)?.start_rune;
     if (!range || range.collapsed || !excerptElement || origin == null ||
       !excerptElement.contains(range.startContainer) || !excerptElement.contains(range.endContainer)) {
       error = 'Select part of the passage first.';

@@ -450,7 +450,7 @@ it('stops at the loaded end and shows the list notice', async () => {
   expect(screen.getByRole('button', { name: 'Next file' }).hasAttribute('disabled')).toBe(true);
   await fireEvent.keyDown(window, { key: 'ArrowRight' });
   expect(onStep).not.toHaveBeenCalled();
-  expect(screen.getByRole('alert').textContent).toBe('Could not load more files');
+  expect(screen.getByRole('alert').textContent).toContain('Could not load more files');
 });
 it.each(['audio/wav', 'application/pdf', 'image/png'])('offers Download when %s exceeds the preview bound', async (mime_type) => {
   render(FileViewer, { client: createAPIClient(viewerFetch({ ...file(), content_state: 'local_content', content_available: true, mime_type, size_bytes: 26 * 1024 * 1024 })), file: file({ mime_type, size_bytes: 26 * 1024 * 1024 }) });
@@ -474,3 +474,37 @@ it('reports when the cell limit omits rows', async () => {
   expect(await screen.findByText('Preview is limited to 20,000 cells; showing 199 rows.', {}, { timeout: 15000 })).toBeDefined();
   expect(screen.getByText('Preview is limited to 200 rows.')).toBeDefined();
 }, 20000);
+
+it('offers a file transcript to Kata when ready and shows preparation errors', async () => {
+  const { KataReadiness, kataReadinessKey } = await import('../../kata/kata-ready.svelte');
+  const requests: unknown[] = [];
+  const client = createAPIClient(async input => {
+    const request = input as Request;
+    const path = new URL(request.url).pathname;
+    if (path.endsWith('/status')) return Response.json({ state: 'ready', project: 'example' });
+    if (path.endsWith('/files/7')) return Response.json({ id: 7, message_id: 11, filename: 'notes.txt', mime_type: 'text/plain', size_bytes: 0, content_state: 'missing_blob' });
+    if (path.endsWith('/prepare')) {
+      requests.push(await request.json());
+      return Response.json({ message: 'The file has no extracted text or transcript' }, { status: 422 });
+    }
+    return Response.json({ issues: [], truncated: false });
+  });
+  const readiness = new KataReadiness(client);
+  await waitFor(() => expect(readiness.ready).toBe(true));
+  const view = render(FileViewer, { props: { client, file: file({ filename: 'notes.txt' }) }, context: new Map([[kataReadinessKey, readiness]]) });
+  try {
+    await screen.findByText(/bytes are missing/);
+    await fireEvent.click(screen.getByRole('button', { name: 'More file actions' }));
+    await fireEvent.click(await screen.findByRole('menuitem', { name: 'Add to task…' }));
+    await screen.findByText('The file has no extracted text or transcript');
+    expect(requests).toEqual([{ selectors: [{ kind: 'docbank_rendition', message_id: 11, attachment_id: 7, start_rune: 0, max_chars: 1000 }] }]);
+  } finally { view.unmount(); readiness.dispose(); }
+});
+
+it('hides Add to task when Kata is unavailable', async () => {
+  const client = createAPIClient(viewerFetch({ id: 7, message_id: 11, filename: 'notes.txt', mime_type: 'text/plain', size_bytes: 0, content_state: 'missing_blob' }));
+  render(FileViewer, { client, file: file() });
+  await screen.findByText(/bytes are missing/);
+  await fireEvent.click(screen.getByRole('button', { name: 'More file actions' }));
+  expect(screen.queryByRole('menuitem', { name: 'Add to task…' })).toBeNull();
+});

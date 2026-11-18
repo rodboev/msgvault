@@ -52,8 +52,9 @@ describe('explore labels', () => {
       )
     ).toBe('Word document');
     expect(fileTypeLabel('', 'archive')).toBe('Archive');
-    expect(fileTypeLabel(undefined, undefined)).toBe('Unknown type');
-    expect(fileTypeLabel('', 'unrecognized-family')).toBe('Unknown type');
+    expect(fileTypeLabel('application/octet-stream', 'other', 'script.py')).toBe('Python');
+    expect(fileTypeLabel(undefined, undefined)).toBe('File');
+    expect(fileTypeLabel('', 'unrecognized-family')).toBe('File');
   });
 
   it('turns every server preflight reason into a sentence', () => {

@@ -4,13 +4,13 @@
   import type { APIClient } from '../../api/client';
   import type { KataIssueReceipt } from '../../api/generated/models';
   import { kataReadiness } from '../../kata/kata-ready.svelte';
-  import { EVIDENCE_WINDOW } from '../../kata/evidence';
+  import { EVIDENCE_WINDOW, type EvidenceSelector } from '../../kata/evidence';
   import Dialog from '../common/Dialog.svelte';
   import KataEvidenceDialog from '../kata/KataEvidenceDialog.svelte';
   import TaskLinks from './TaskLinks.svelte';
 
-  let { client, messageId, title, email, onclose, onsettings }: {
-    client: APIClient; messageId: number; title: string; email: boolean; onclose: () => void; onsettings?: () => void;
+  let { client, messageId, title, email, onclose, onsettings, selector }: {
+    client: APIClient; messageId: number; title: string; email: boolean; onclose: () => void; onsettings?: () => void; selector?: EvidenceSelector;
   } = $props();
   const kata = kataReadiness();
   let provider = $state(untrack(() => email ? 'tasks' : 'kata'));
@@ -33,7 +33,7 @@
       <TaskLinks {client} {messageId} {title} {onsettings} mode="add" bind:busy oncancel={onclose} oncomplete={onclose} />
     </div>{/if}
     {#if kataInitialized && (email || kata?.ready)}<div hidden={provider !== 'kata'}>
-      <KataEvidenceDialog {client} selector={{ kind: 'message', message_id: messageId, start_rune: 0, max_chars: EVIDENCE_WINDOW }} defaultTitle={title} defaultBrief={`${location.origin}/messages/${messageId}`} modeLabel={email} bind:busy={kataBusy} bind:receipt={kataReceipt} {onclose} />
+      <KataEvidenceDialog {client} selector={selector ?? { kind: 'message', message_id: messageId, start_rune: 0, max_chars: EVIDENCE_WINDOW }} defaultTitle={title} defaultBrief={`${location.origin}/messages/${messageId}`} modeLabel={email} bind:busy={kataBusy} bind:receipt={kataReceipt} {onclose} />
     </div>{/if}
   </div>
 </Dialog>
